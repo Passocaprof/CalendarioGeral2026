@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendário Escolar 2026</title>
+
+<style>
+body{font-family:Segoe UI;margin:0;background:#f8fafc;}
+.top-bar{height:6px;background:linear-gradient(to right,#002776 60%,#bf0a30 60%);}
+
+header,footer{
+text-align:center;background:white;color:#002776;
+padding:18px;border-bottom:3px solid #bf0a30;
+}
+
+.container{max-width:1400px;margin:auto;padding:20px;}
+
+.fade{animation:fade .35s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+
+.month-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:15px;
+}
+
+.month-card{
+background:white;padding:22px;border-radius:12px;
+border:1px solid #e2e8f0;cursor:pointer;
+transition:.25s;text-align:center;font-weight:600;
+}
+.month-card:hover{transform:scale(1.05);border-color:#002776;}
+
+.month-header{
+display:flex;justify-content:center;align-items:center;
+gap:20px;margin-bottom:10px;
+}
+
+.arrow{
+font-size:30px;cursor:pointer;color:#002776;
+user-select:none;font-weight:bold;
+}
+
+.week-header{
+display:grid;grid-template-columns:repeat(7,1fr);
+text-align:center;font-weight:bold;margin-bottom:5px;
+}
+
+.days-grid{
+display:grid;grid-template-columns:repeat(7,1fr);
+gap:5px;
+}
+
+.day{
+background:white;border-radius:8px;padding:6px;
+min-height:90px;cursor:pointer;transition:.2s;
+}
+
+.day:hover{
+transform:scale(1.05);
+box-shadow:0 6px 18px rgba(0,0,0,.2);
+z-index:3;
+}
+
+.today{
+box-shadow:
+0 0 10px #3b82f6,
+0 0 18px rgba(59,130,246,.7);
+border:2px solid #3b82f6;
+}
+
+.event-label{
+font-size:10px;margin-top:3px;font-weight:bold;
+}
+
+.legend{
+margin-top:20px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:10px;
+}
+
+.legend-item{
+background:white;padding:10px;border-radius:8px;
+display:flex;align-items:center;gap:10px;
+border:1px solid #e2e8f0;
+}
+
+.legend-color{
+width:18px;height:18px;border-radius:4px;
+}
+
+.modal{
+display:none;position:fixed;top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,.6);
+align-items:center;justify-content:center;
+}
+
+.modal-box{
+background:white;padding:25px;border-radius:12px;
+max-width:420px;width:90%;
+}
+
+button{
+margin-top:20px;padding:10px 16px;border:none;
+border-radius:8px;background:#002776;color:white;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-bar"></div>
+
+<header>
+<h3>Estado da Bahia — Do lado da Gente — 2026</h3>
+<h2>Colégio Estadual Rolando Laranjeira Barbosa</h2>
+<h1>Calendário Escolar 2026</h1>
+</header>
+
+<div class="container">
+<div id="calendar"></div>
+</div>
+
+<footer>
+Colégio Estadual Rolando Laranjeira Barbosa<br>
+Estado da Bahia — Do lado da Gente — 2026<br>
+Santa Maria da Vitória
+</footer>
+
+<div class="modal" id="modal">
+<div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+
+/* ===== CORES ===== */
+
+const cores={
+"Avaliação":"#facc15",
+"Recesso":"#2dd4bf",
+"Feriado Nacional":"#ef4444",
+"Feriado Estadual":"#f97316",
+"Administrativo":"#3b82f6",
+"Projeto":"#8b5cf6",
+"Comunidade":"#06b6d4",
+"Unidade":"#16a34a",
+"Conselho":"#6366f1",
+"Reunião":"#14b8a6"
+};
+
+function dataBR(d){
+return new Date(d).toLocaleDateString("pt-BR").replaceAll("/",".");
+}
+
+/* ===== EVENTOS (EXATAMENTE COMO VOCÊ ENVIOU) ===== */
+
+const eventos=[
+{data:"2026-01-01",nome:"Ano Novo",tipo:"Feriado Nacional"},
+{inicio:"2026-01-12",fim:"2026-01-20",nome:"Matrícula da Rede Estadual",tipo:"Administrativo"},
+{inicio:"2026-02-02",fim:"2026-02-06",nome:"Jornada Pedagógica 2026",tipo:"Administrativo"},
+{data:"2026-02-09",nome:"Aula Inaugural / Início da I Unidade",tipo:"Unidade"},
+{inicio:"2026-02-12",fim:"2026-02-18",nome:"Recesso de Carnaval",tipo:"Recesso"},
+{inicio:"2026-02-23",fim:"2026-03-06",nome:"Avaliação Diagnóstica (Plurall)",tipo:"Avaliação"},
+{inicio:"2026-02-09",fim:"2026-03-31",nome:"Sensibilização Projetos Estruturantes",tipo:"Projeto"},
+{data:"2026-03-10",nome:"Reunião com Pais",tipo:"Reunião"},
+{data:"2026-04-03",nome:"Sexta-feira Santa",tipo:"Feriado Nacional"},
+{data:"2026-04-05",nome:"Páscoa",tipo:"Feriado Nacional"},
+{data:"2026-04-21",nome:"Tiradentes",tipo:"Feriado Nacional"},
+{inicio:"2026-04-27",fim:"2026-05-04",nome:"Semana Avaliações Escritas I Unidade",tipo:"Avaliação"},
+{data:"2026-05-01",nome:"Dia do Trabalho",tipo:"Feriado Nacional"},
+{data:"2026-05-15",nome:"Fim da I Unidade",tipo:"Unidade"},
+{data:"2026-05-16",nome:"Conselho Classe I Unidade",tipo:"Conselho"},
+{data:"2026-05-18",nome:"Início II Unidade",tipo:"Unidade"},
+{inicio:"2026-05-18",fim:"2026-05-29",nome:"Avaliação Acompanhamento Plurall",tipo:"Avaliação"},
+{data:"2026-06-03",nome:"Plantão Pedagógico",tipo:"Administrativo"},
+{inicio:"2026-06-01",fim:"2026-06-12",nome:"RPP 1º Ciclo",tipo:"Administrativo"},
+{data:"2026-06-13",nome:"Família na Escola",tipo:"Comunidade"},
+{data:"2026-06-18",nome:"Culminância Projetos Artísticos",tipo:"Projeto"},
+{data:"2026-06-24",nome:"São João",tipo:"Feriado Estadual"},
+{inicio:"2026-06-22",fim:"2026-07-03",nome:"Recesso Junino",tipo:"Recesso"},
+{inicio:"2026-07-20",fim:"2026-07-31",nome:"RPP 2º Ciclo",tipo:"Administrativo"},
+{inicio:"2026-07-29",fim:"2026-07-31",nome:"Gincana Escolar",tipo:"Projeto"},
+{inicio:"2026-08-10",fim:"2026-08-14",nome:"Semana Avaliações II Unidade",tipo:"Avaliação"},
+{data:"2026-08-15",nome:"Sábado Letivo",tipo:"Comunidade"},
+{data:"2026-08-28",nome:"Fim II Unidade",tipo:"Unidade"},
+{data:"2026-08-29",nome:"Conselho Classe II Unidade",tipo:"Conselho"},
+{data:"2026-08-31",nome:"Início III Unidade",tipo:"Unidade"},
+{inicio:"2026-08-31",fim:"2026-09-11",nome:"RPP 3º Ciclo",tipo:"Administrativo"},
+{data:"2026-09-07",nome:"Independência do Brasil",tipo:"Feriado Nacional"},
+{data:"2026-09-19",nome:"Plantão Pedagógico",tipo:"Administrativo"},
+{data:"2026-09-24",nome:"Feira de Ciências",tipo:"Projeto"},
+{inicio:"2026-09-28",fim:"2026-10-09",nome:"Avaliação Formativa Plurall",tipo:"Avaliação"},
+{inicio:"2026-10-10",fim:"2026-10-18",nome:"Semana do Saco Cheio",tipo:"Recesso"},
+{data:"2026-11-02",nome:"Finados",tipo:"Feriado Nacional"},
+{inicio:"2026-11-09",fim:"2026-11-19",nome:"Prova SABE",tipo:"Avaliação"},
+{data:"2026-11-15",nome:"Proclamação República",tipo:"Feriado Nacional"},
+{inicio:"2026-11-16",fim:"2026-11-27",nome:"Renovação Matrícula",tipo:"Administrativo"},
+{data:"2026-11-20",nome:"Consciência Negra",tipo:"Feriado Estadual"},
+{data:"2026-11-23",nome:"Prêmio Gestão Aprendizagem",tipo:"Projeto"},
+{inicio:"2026-11-30",fim:"2026-12-04",nome:"Semana Provas III Unidade",tipo:"Avaliação"},
+{inicio:"2026-12-08",fim:"2026-12-10",nome:"Encontro Estudantil",tipo:"Projeto"},
+{data:"2026-12-09",nome:"Entrega Resultados",tipo:"Administrativo"},
+{data:"2026-12-10",nome:"Recuperação Final",tipo:"Administrativo"},
+{data:"2026-12-11",nome:"Recuperação Final",tipo:"Administrativo"},
+{data:"2026-12-14",nome:"Recuperação Final",tipo:"Administrativo"},
+{data:"2026-12-17",nome:"Pré Conselho",tipo:"Administrativo"},
+{data:"2026-12-21",nome:"Conselho Final",tipo:"Administrativo"},
+{data:"2026-12-22",nome:"Formatura",tipo:"Administrativo"},
+{data:"2026-12-23",nome:"Entrega Final Resultados",tipo:"Administrativo"},
+{data:"2026-12-25",nome:"Natal",tipo:"Feriado Nacional"}
+];
+
+/* ===== ENGINE ORIGINAL PRESERVADA ===== */
+
+function eventosDia(d){
+return eventos.filter(e=>{
+if(e.data) return e.data===d;
+return d>=e.inicio && d<=e.fim;
+});
+}
+
+function ehFimSemana(d){
+let dia=new Date(d).getDay();
+return dia===0 || dia===6;
+}
+
+function pintaFimSemana(e){
+if(e.tipo==="Recesso") return true;
+if(e.nome.toLowerCase().includes("saco cheio")) return true;
+return false;
+}
+
+function eventosDiaRender(d){
+let lista=eventosDia(d);
+if(!ehFimSemana(d)) return lista;
+return lista.filter(e=>pintaFimSemana(e));
+}
+
+function inicioFim(e,d){
+if(e.data) return true;
+return d===e.inicio || d===e.fim;
+}
+
+function gradiente(lista){
+if(lista.length===1) return cores[lista[0].tipo];
+let step=100/lista.length;
+let g="linear-gradient(to right,";
+lista.forEach((e,i)=>{
+let s=i*step;
+let f=(i+1)*step;
+g+=`${cores[e.tipo]} ${s}%,${cores[e.tipo]} ${f}%,`;
+});
+return g.slice(0,-1)+")";
+}
+
+/* ===== MODAL ORIGINAL ===== */
+
+const modal=document.getElementById("modal");
+const modalBox=document.getElementById("modalBox");
+
+function abrirModal(lista,data){
+modal.style.display="flex";
+modalBox.innerHTML="<h3>"+dataBR(data)+"</h3>";
+lista.forEach(e=>{
+modalBox.innerHTML+=`<p>${e.nome}<br>${dataBR(e.data||e.inicio)} até ${dataBR(e.fim||e.data)}</p>`;
+});
+modalBox.innerHTML+=`<button onclick="modal.style.display='none'">Fechar</button>`;
+}
+
+modal.onclick=e=>{ if(e.target===modal) modal.style.display="none"; };
+
+/* ===== NOVO: MODO ANO + MODO MÊS ===== */
+
+const meses=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const semana=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+let mesAtual=new Date().getMonth();
+const hoje=new Date().toISOString().split("T")[0];
+const calendar=document.getElementById("calendar");
+
+function renderAno(){
+calendar.className="fade";
+let html='<div class="month-grid">';
+meses.forEach((m,i)=>{
+html+=`<div class="month-card" onclick="abrirMes(${i})">${m}</div>`;
+});
+html+='</div>';
+
+html+='<h3>Legenda Geral</h3><div class="legend">';
+Object.keys(cores).forEach(t=>{
+html+=`<div class="legend-item">
+<div class="legend-color" style="background:${cores[t]}"></div>${t}</div>`;
+});
+html+='</div>';
+
+calendar.innerHTML=html;
+}
+
+function abrirMes(m){
+mesAtual=m;
+renderMes();
+}
+
+function renderMes(){
+
+calendar.className="fade";
+
+let m=mesAtual;
+
+let html=`
+<div class="month-header">
+<div class="arrow" onclick="mesAnterior()">◀</div>
+<h2>${meses[m]}</h2>
+<div class="arrow" onclick="proximoMes()">▶</div>
+</div>
+`;
+
+html+='<div class="week-header">';
+semana.forEach(d=> html+=`<div>${d}</div>`);
+html+='</div>';
+
+html+='<div class="days-grid">';
+
+let dias=new Date(2026,m+1,0).getDate();
+let primeiroDia=new Date(2026,m,1).getDay();
+
+for(let i=0;i<primeiroDia;i++) html+="<div></div>";
+
+let tiposMes=new Set();
+
+for(let d=1; d<=dias; d++){
+
+let data=`2026-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+let lista=eventosDiaRender(data);
+
+lista.forEach(e=>tiposMes.add(e.tipo));
+
+let bg=lista.length?gradiente(lista):"white";
+let classeHoje=(data===hoje)?"today":"";
+
+html+=`<div class="day ${classeHoje}" style="background:${bg}" onclick='abrirModal(${JSON.stringify(lista)},"${data}")'>
+<b>${d}</b>`;
+
+lista.forEach(e=>{
+if(inicioFim(e,data)){
+html+=`<div class="event-label">${e.nome}</div>`;
+}
+});
+
+html+=`</div>`;
+}
+
+html+='</div>';
+
+html+='<div class="legend">';
+tiposMes.forEach(t=>{
+html+=`<div class="legend-item">
+<div class="legend-color" style="background:${cores[t]}"></div>${t}</div>`;
+});
+html+='</div>';
+
+html+=`<button onclick="renderAno()">Voltar para Ano</button>`;
+
+calendar.innerHTML=html;
+}
+
+function proximoMes(){
+mesAtual=(mesAtual+1)%12;
+renderMes();
+}
+
+function mesAnterior(){
+mesAtual=(mesAtual-1+12)%12;
+renderMes();
+}
+
+renderAno();
+
+</script>
+
+</body>
+</html>
